@@ -18,7 +18,7 @@ interface DraggableSliderProps {
   
     const handleDrag = (e: MouseEvent) => {
       if (!isDragging || !sliderRef.current) return;
-      
+  
       const rect = sliderRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       onSliderChange(x);
@@ -40,32 +40,42 @@ interface DraggableSliderProps {
     }, [isDragging]);
   
     return (
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{ zIndex: 1 }}
-      >
-        {/* Slider Track */}
-        <div 
+      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
+        {/* Full-height vertical line container */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Vertical Line (Track) that spans full height */}
+          <div
+            className="absolute top-0 bottom-0 w-1 bg-white opacity-50"
+            style={{
+              left: `${value * 100}%`,
+              transform: 'translateX(-50%)'
+            }}
+          />
+        </div>
+  
+        {/* Invisible Horizontal Line (for drag functionality) */}
+        <div
           ref={sliderRef}
-          className="absolute top-1/2 left-0 w-full h-1 bg-white/10 cursor-ew-resize pointer-events-auto"
+          className="absolute top-1/2 left-0 w-full h-0 bg-transparent pointer-events-auto"
           onMouseDown={() => setIsDragging(true)}
         >
-          {/* Slider Handle */}
-          <div 
-            className="absolute top-1/2 w-1 h-24 bg-white -translate-y-1/2 pointer-events-auto"
-            style={{ 
+          {/* Slider Button */}
+          <div
+            className="absolute top-0 w-8 flex items-center justify-center pointer-events-auto"
+            style={{
               left: `${value * 100}%`,
-              transform: `translate(-50%, -50%)`,
+              transform: 'translate(-50%, -50%)',
               cursor: 'ew-resize'
             }}
           >
-            {/* Handle Grabber */}
-            <div className="absolute top-1/2 left-1/2 w-4 h-4 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
+            <div className="w-8 h-8 bg-blue-500 rounded-full shadow-lg" />
           </div>
         </div>
       </div>
     );
   };
+  
+  
 
 const ShaderCube: React.FC = () => {
     const shaderRef = useRef<THREE.ShaderMaterial>(null);
@@ -176,29 +186,29 @@ const useCameraOffset = () => {
 };
 
 const Scene: React.FC = () => {
-    const [sliderPosition, setSliderPosition] = useState(0.5);
-  
-    return (
-      <div className="relative w-screen h-screen">
-        <SliderContext.Provider value={sliderPosition}>
-          <div className="absolute inset-0" style={{ zIndex: 0 }}>
-            <Canvas camera={{ position: [0, 0, 5] }}>
-              <color attach="background" args={['#000000']} />
-              <ambientLight intensity={0.5} />
-              <pointLight position={[10, 10, 10]} />
-              <ShaderCube />
-              <CameraOffset />
-              <OrbitControls enabled={false} />
-            </Canvas>
-          </div>
-          <DraggableSlider 
-            onSliderChange={setSliderPosition}
-            value={sliderPosition}
-          />
-        </SliderContext.Provider>
-      </div>
-    );
-  };
+  const [sliderPosition, setSliderPosition] = useState(0.5);
+
+  return (
+    <div className="relative w-screen h-screen">
+      <SliderContext.Provider value={sliderPosition}>
+        <div className="absolute inset-0" style={{ zIndex: 0 }}>
+          <Canvas camera={{ position: [0, 0, 5] }}>
+            <color attach="background" args={['#000000']} />
+            <ambientLight intensity={0.5} />
+            <pointLight position={[10, 10, 10]} />
+            <ShaderCube />
+            <CameraOffset />
+            <OrbitControls enabled={false} />
+          </Canvas>
+        </div>
+        <DraggableSlider 
+          onSliderChange={setSliderPosition}
+          value={sliderPosition}
+        />
+      </SliderContext.Provider>
+    </div>
+  );
+};
 
 // CameraOffset Component to Use the Hook
 const CameraOffset: React.FC = () => {
