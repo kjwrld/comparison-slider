@@ -1,18 +1,20 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { useControls } from 'leva';
-import * as THREE from 'three';
+// import { useControls } from 'leva';
+import Book from './Book';
+// import ShaderCube from './ShaderCube';
 
 // Shared context for slider position
 const SliderContext = React.createContext<number>(0);
 
 interface DraggableSliderProps {
     onSliderChange: (value: number) => void;
+    onScreenXChange: (screenX: number) => void;
     value: number;
   }
   
-  const DraggableSlider: React.FC<DraggableSliderProps> = ({ onSliderChange, value }) => {
+  const DraggableSlider: React.FC<DraggableSliderProps> = ({ onSliderChange, onScreenXChange, value  }) => {
     const [isDragging, setIsDragging] = useState(false);
     const sliderRef = useRef<HTMLDivElement>(null);
   
@@ -22,6 +24,7 @@ interface DraggableSliderProps {
       const rect = sliderRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       onSliderChange(x);
+      onScreenXChange(e.clientX);
     };
   
     useEffect(() => {
@@ -73,85 +76,7 @@ interface DraggableSliderProps {
         </div>
       </div>
     );
-  };
-  
-  
-
-const ShaderCube: React.FC = () => {
-    const shaderRef = useRef<THREE.ShaderMaterial>(null);
-    const sliderPosition = React.useContext(SliderContext);
-    
-    const { color1, color2, frequency, intensity } = useControls({
-      color1: '#ff0000',
-      color2: '#0000ff',
-      frequency: { value: 10, min: 0, max: 50, step: 0.1 },
-      intensity: { value: 0.5, min: 0, max: 1, step: 0.01 }
-    });
-  
-    const uniforms = useMemo(
-      () => ({
-        uColor1: { value: new THREE.Color(color1) },
-        uColor2: { value: new THREE.Color(color2) },
-        uTime: { value: 0 },
-        uFrequency: { value: frequency },
-        uIntensity: { value: intensity },
-        uSlider: { value: sliderPosition }
-      }),
-      []
-    );
-  
-    useFrame(({ clock }) => {
-      if (shaderRef.current) {
-        uniforms.uTime.value = clock.getElapsedTime();
-        uniforms.uColor1.value.set(color1);
-        uniforms.uColor2.value.set(color2);
-        uniforms.uFrequency.value = frequency;
-        uniforms.uIntensity.value = intensity;
-        uniforms.uSlider.value = sliderPosition;
-      }
-    });
-  
-    return (
-      <mesh>
-        <boxGeometry args={[2, 2, 2]} />
-        <shaderMaterial
-          ref={shaderRef}
-          vertexShader={`
-            varying vec2 vUv;
-            varying vec3 vPosition;
-            
-            void main() {
-              vUv = uv;
-              vPosition = position;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `}
-          fragmentShader={`
-            uniform vec3 uColor1;
-            uniform vec3 uColor2;
-            uniform float uTime;
-            uniform float uFrequency;
-            uniform float uIntensity;
-            uniform float uSlider;
-  
-            varying vec2 vUv;
-            varying vec3 vPosition;
-  
-            void main() {
-              // Use position.x for comparison split
-              float split = step(vPosition.x, mix(-1.0, 1.0, uSlider));
-              
-              vec3 baseColor = mix(uColor1, uColor2, split);
-              float strength = sin(vUv.x * uFrequency + uTime) * uIntensity;
-              
-              gl_FragColor = vec4(baseColor * (strength + 1.0), 1.0);
-            }
-          `}
-          uniforms={uniforms}
-        />
-      </mesh>
-    );
-  };
+};
 
 // Reusable Hook: Camera Offset Based on Mouse Movement
 const useCameraOffset = () => {
@@ -187,25 +112,49 @@ const useCameraOffset = () => {
 
 const Scene: React.FC = () => {
   const [sliderPosition, setSliderPosition] = useState(0.5);
+  const [sliderScreenX, setSliderScreenX] = useState(window.innerWidth * 0.5);
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  const handleSliderChange = (value: number) => {
+    setSliderPosition(value);
+  };
+
+  const handleScreenXChange = (screenX: number) => {
+    setSliderScreenX(screenX);
+  };
 
   return (
-    <div className="relative w-screen h-screen">
+    <div className="relative w-screen h-screen" ref={canvasRef}>
       <SliderContext.Provider value={sliderPosition}>
+        {/* Canvas */}
         <div className="absolute inset-0" style={{ zIndex: 0 }}>
           <Canvas camera={{ position: [0, 0, 5] }}>
             <color attach="background" args={['#000000']} />
             <ambientLight intensity={0.5} />
             <pointLight position={[10, 10, 10]} />
-            <ShaderCube />
+            {/* <ShaderCube sliderContext={SliderContext} /> */}
+            <Book sliderPosition={sliderPosition} sliderScreenX={sliderScreenX} canvasWidth={window.innerWidth} />
+
             <CameraOffset />
             <OrbitControls enabled={false} />
           </Canvas>
         </div>
-        <DraggableSlider 
-          onSliderChange={setSliderPosition}
-          value={sliderPosition}
-        />
+
+        {/* Draggable Slider */}
+        <DraggableSlider onSliderChange={handleSliderChange} onScreenXChange={handleScreenXChange} value={sliderPosition} />
       </SliderContext.Provider>
+
+      {/* Text Overlay */}
+      <div
+        className="absolute left-4 text-left pointer-events-none"
+        style={{
+          bottom: '20%', // Position between middle and bottom
+          userSelect: 'none', // Make text non-selectable
+        }}
+      >
+        <h1 className="text-6xl font-bold text-white leading-tight">Bring your world to life</h1>
+        <p className="text-4xl text-white/70">3D without Limits</p>
+      </div>
     </div>
   );
 };
