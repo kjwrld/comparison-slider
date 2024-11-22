@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useControls } from 'leva';
 import { Mesh, Raycaster, Vector3 } from 'three';
 
 interface WallOfLightProps {
@@ -12,11 +11,6 @@ const WallOfLight: React.FC<WallOfLightProps> = ({ sliderPosition, onIntersect }
   const meshRef = useRef<Mesh>(null);
   const raycasterRef = useRef(new Raycaster());
   const { scene } = useThree();
-  
-  const { centerY, centerZ } = useControls('Wall Center Position', {
-    centerY: { value: 0, min: -5, max: 5, step: 0.1 },
-    centerZ: { value: 0, min: -5, max: 5, step: 0.1 },
-  });
 
   // Setup raycaster
   useEffect(() => {
@@ -30,6 +24,8 @@ const WallOfLight: React.FC<WallOfLightProps> = ({ sliderPosition, onIntersect }
     if (meshRef.current) {
       // Update wall position
       const wallX = sliderPosition * 10 - 5;
+      const centerY = 0;
+      const centerZ = 0;
       meshRef.current.position.set(wallX, centerY, centerZ);
 
       // Cast rays in both directions
@@ -61,11 +57,11 @@ const WallOfLight: React.FC<WallOfLightProps> = ({ sliderPosition, onIntersect }
     <mesh ref={meshRef}>
       <boxGeometry args={[0.05, 5, 10]} />
       <meshStandardMaterial 
-        color="yellow" 
-        emissive="yellow" 
-        emissiveIntensity={5}
+        // color="yellow" 
+        // emissive="yellow" 
+        // emissiveIntensity={5}
         transparent
-        opacity={0.5}
+        opacity={0}
       />
     </mesh>
   );

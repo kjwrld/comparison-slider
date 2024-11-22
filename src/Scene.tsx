@@ -1,6 +1,6 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import React, { useRef, useEffect, useState } from 'react';
+import { Canvas, useFrame, useThree, Vector3 } from '@react-three/fiber';
+// import { OrbitControls } from '@react-three/drei';
 import ComparisonShader from './ComparisonShader';
 import AnimatedSliderButton from './AnimatedSliderButton';
 import WallOfLight from './WallOfLight';
@@ -115,11 +115,10 @@ const SceneObjects: React.FC<{
     material2: MaterialProps;
   }> = ({ sliderPosition, material1, material2 }) => {
     useCameraOffset();
-    const handleWallIntersect = (side: 'left' | 'right', point: THREE.Vector3) => {
+    const handleWallIntersect = (side: 'left' | 'right', point: Vector3) => {
       // You can use this to trigger additional effects when the wall intersects objects
       console.log(`Wall intersected object on ${side} side at`, point);
     };
-  
     return (
       <>
         <color attach="background" args={['#000000']} />
@@ -225,8 +224,6 @@ const Scene: React.FC = () => {
         <Canvas camera={{ position: [0, 0, 5] }}>
           <SceneObjects
             sliderPosition={state.sliderPosition}
-            sliderScreenX={state.sliderScreenX}
-            canvasWidth={state.canvasWidth}
             material1={state.material1}
             material2={state.material2}
           />

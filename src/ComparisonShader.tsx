@@ -35,8 +35,8 @@ const ComparisonShader: React.FC<ComparisonShaderProps> = ({
     uMetalness1: { value: material1.metalness },
     uMetalness2: { value: material2.metalness },
     uTime: { value: 0 },
-    uTransitionWidth: { value: 0.2 },
-    uSide: { value: 0 } // 0 for left, 1 for right
+    uTransitionWidth: { value: 0.02 }, // Made smaller for sharper split
+    uPlaneNormal: { value: new THREE.Vector3(1, 0, 0) }, // Wall normal direction
   }), [material1, material2]);
 
   useEffect(() => {
@@ -53,12 +53,8 @@ const ComparisonShader: React.FC<ComparisonShaderProps> = ({
   useFrame((state) => {
     if (shaderRef.current && meshRef.current) {
       shaderRef.current.uniforms.uTime.value = state.clock.elapsedTime;
-      const localWallPos = wallPosition.x / 5;
+      const localWallPos = wallPosition.x;
       shaderRef.current.uniforms.uWallPosition.value = localWallPos;
-      
-      // Determine which side of the wall the mesh is on
-      const meshPosition = meshRef.current.position.x;
-      shaderRef.current.uniforms.uSide.value = meshPosition > wallPosition.x ? 1 : 0;
     }
   });
 
@@ -96,7 +92,7 @@ const ComparisonShader: React.FC<ComparisonShaderProps> = ({
           uniform float uMetalness2;
           uniform float uTransitionWidth;
           uniform float uTime;
-          uniform float uSide;
+          uniform vec3 uPlaneNormal;
 
           varying vec2 vUv;
           varying vec3 vPosition;
@@ -109,17 +105,16 @@ const ComparisonShader: React.FC<ComparisonShaderProps> = ({
           }
 
           void main() {
-            // Use world position for position-based effects
-            float worldX = vWorldPosition.x;
+            // Calculate signed distance from the splitting plane
+            float signedDistance = dot(vWorldPosition - vec3(uWallPosition, 0.0, 0.0), uPlaneNormal);
             
-            // Determine material based on wall position
-            vec3 baseColor = uSide > 0.5 ? uColor2 : uColor1;
-            float roughness = uSide > 0.5 ? uRoughness2 : uRoughness1;
-            float metalness = uSide > 0.5 ? uMetalness2 : uMetalness1;
+            // Create a sharp transition with a small smooth edge
+            float blend = smoothstep(-uTransitionWidth, uTransitionWidth, signedDistance);
             
-            // Add transition effect near the wall
-            float distToWall = abs(worldX - uWallPosition);
-            float transitionFactor = smoothTransition(0.0, uTransitionWidth, distToWall);
+            // Determine material properties based on signed distance
+            vec3 baseColor = mix(uColor1, uColor2, blend);
+            float roughness = mix(uRoughness1, uRoughness2, blend);
+            float metalness = mix(uMetalness1, uMetalness2, blend);
             
             // Enhanced material effects
             float fresnel = pow(1.0 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
@@ -127,10 +122,14 @@ const ComparisonShader: React.FC<ComparisonShaderProps> = ({
             
             // Add dynamic effects
             float sparkle = sin(vUv.x * 10.0 + uTime) * sin(vUv.y * 10.0 + uTime) * 0.1;
-            float pulse = sin(distToWall * 5.0 - uTime) * 0.1;
+            
+            // Add transition highlight
+            float transitionGlow = (1.0 - abs(signedDistance)) * 0.5 * 
+                                 (sin(uTime * 2.0) * 0.5 + 0.5);
             
             // Final color
-            vec3 finalColor = mix(baseColor, reflection, roughness) + sparkle + pulse;
+            vec3 finalColor = mix(baseColor, reflection, roughness) + sparkle;
+            finalColor += vec3(transitionGlow * 0.2); // Add subtle glow at transition
             
             gl_FragColor = vec4(finalColor, 1.0);
           }
